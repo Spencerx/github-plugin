@@ -10,6 +10,7 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
+import hudson.EnvVars;
 import jenkins.tasks.SimpleBuildStep;
 import org.jenkinsci.plugins.github.common.CombineErrorHandler;
 import org.jenkinsci.plugins.github.extension.status.GitHubCommitShaSource;
@@ -133,6 +134,26 @@ public class GitHubCommitStatusSetter extends Notifier implements SimpleBuildSte
                         GitHubCommitNotifier_SettingCommitStatus(repo.getHtmlUrl() + "/commit/" + sha)
                 );
 
+                EnvVars env = new EnvVars();
+                env = run.getEnvironment(listener);
+                String policiesInViolationString = env.get("BOM_ENTRIES_IN_VIOLATION");
+
+                if (policiesInViolationString != null) {
+                    GHCommitState BdCommitState;
+
+                    String policiesInViolationMessage = "Policy violations: " + policiesInViolationString;
+                    listener.getLogger().println(
+                            policiesInViolationMessage
+                    );
+                    int policiesInViolation  = Integer.parseInt(policiesInViolationString);
+                    if (policiesInViolation == 0){
+                        BdCommitState = GHCommitState.SUCCESS;
+                    }
+                    else{
+                        BdCommitState = GHCommitState.FAILURE;
+                    }
+                    repo.createCommitStatus(sha, BdCommitState, backref, policiesInViolationMessage, "Black Duck");
+                }
                 repo.createCommitStatus(sha, state, backref, message, contextName);
             }
 
